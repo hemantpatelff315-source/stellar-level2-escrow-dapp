@@ -26,6 +26,12 @@ export const useWallet = () => {
 
   useEffect(() => {
     void refreshWallet()
+    // Also check when the extension becomes available (e.g., after being installed)
+    const handleFocus = () => {
+      void refreshWallet()
+    }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
   }, [])
 
   const connect = async () => {

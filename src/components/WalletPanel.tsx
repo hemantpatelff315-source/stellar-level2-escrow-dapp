@@ -35,11 +35,16 @@ export const WalletPanel = ({ wallet, loading, error, onConnect, onDisconnect }:
         <div className="flex items-start gap-3">
           <FiAlertCircle className="mt-0.5 shrink-0 text-amber-300" />
           <div className="text-sm text-amber-100">
-            <p className="font-semibold">Freighter Wallet not installed</p>
-            <p className="mt-1">Install the extension:</p>
-            <a href="https://chromewebstore.google.com/detail/freighter-wallet/bcacfldlkkdpmholelbnjodlcjhcjkde" target="_blank" rel="noopener noreferrer" className="mt-2 inline-block rounded bg-amber-500/30 px-3 py-1 text-xs font-medium hover:bg-amber-500/50">
-              Chrome Web Store →
-            </a>
+            <p className="font-semibold">Freighter Wallet not detected</p>
+            <p className="mt-1">If you just installed it:</p>
+            <div className="mt-2 flex gap-2">
+              <button onClick={() => window.location.reload()} className="rounded bg-amber-500/30 px-3 py-1 text-xs font-medium hover:bg-amber-500/50">
+                Refresh Page
+              </button>
+              <a href="https://chromewebstore.google.com/detail/freighter-wallet/bcacfldlkkdpmholelbnjodlcjhcjkde" target="_blank" rel="noopener noreferrer" className="rounded bg-amber-500/30 px-3 py-1 text-xs font-medium hover:bg-amber-500/50">
+                Install →
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -48,6 +53,7 @@ export const WalletPanel = ({ wallet, loading, error, onConnect, onDisconnect }:
     {error && !isExtensionMissing(error) && (
       <div className="mt-5 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
         <p className="text-sm text-rose-200">{error}</p>
+        <p className="mt-2 text-xs text-rose-300/80">💡 Open browser console (F12) to see detailed connection logs.</p>
       </div>
     )}
 

@@ -3,25 +3,57 @@ import { getWalletBalance, STELLAR_NETWORK, TESTNET_NETWORK_PASSPHRASE, isValidS
 
 const normalizeNetwork = (network?: string | null) => network?.toLowerCase() ?? STELLAR_NETWORK
 
-const getFreighterApi = () => {
-  if (typeof window === 'undefined' || !window.freighterApi) {
-    throw new Error('Freighter wallet is not installed or available. Install the extension and refresh the page.')
+const waitForFreighterApi = (maxAttempts = 10, delayMs = 500): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    let attempts = 0
+    const checkApi = () => {
+      attempts++
+      console.log(`[Freighter] Attempt ${attempts}/${maxAttempts} to detect extension...`)
+      if (typeof window !== 'undefined' && window.freighterApi) {
+        console.log('[Freighter] Extension detected!')
+        resolve(window.freighterApi)
+        return
+      }
+      if (attempts >= maxAttempts) {
+        console.error('[Freighter] Extension not found after all attempts')
+        reject(new Error('Freighter wallet is not installed or available. Install the extension and refresh the page.'))
+        return
+      }
+      setTimeout(checkApi, delayMs)
+    }
+    checkApi()
+  })
+}
+
+const getFreighterApi = async (): Promise<any> => {
+  if (typeof window === 'undefined') {
+    throw new Error('Window object not available.')
   }
-  return window.freighterApi
+
+  if (window.freighterApi) {
+    console.log('[Freighter] API already available')
+    return window.freighterApi
+  }
+
+  console.log('[Freighter] API not yet available, waiting...')
+  return waitForFreighterApi()
 }
 
 const getFreighterAddress = async (): Promise<string> => {
-  const api = getFreighterApi()
+  const api = await getFreighterApi()
 
   try {
     if (api.getAddress) {
+      console.log('[Freighter] Calling getAddress()...')
       return await api.getAddress()
     }
 
     if (api.getPublicKey) {
+      console.log('[Freighter] Calling getPublicKey()...')
       return await api.getPublicKey()
     }
-  } catch {
+  } catch (error) {
+    console.error('[Freighter] Error getting address:', error)
     throw new Error('Freighter is installed but did not return a wallet address. Unlock it and try again.')
   }
 
@@ -29,24 +61,35 @@ const getFreighterAddress = async (): Promise<string> => {
 }
 
 export const connectFreighterWallet = async (): Promise<WalletState> => {
-  const api = getFreighterApi()
-  const connected = await api.isConnected?.() ?? false
+  console.log('[Freighter] Starting connection flow...')
+  const api = await getFreighterApi()
 
-  if (!connected) {
-    try {
+  try {
+    const connected = await api.isConnected?.() ?? false
+    console.log('[Freighter] isConnected:', connected)
+
+    if (!connected) {
+      console.log('[Freighter] Requesting access...')
       const allowed = await api.isAllowed?.() ?? false
+      console.log('[Freighter] isAllowed:', allowed)
       if (!allowed) {
         await api.setAllowed?.()
+        console.log('[Freighter] Called setAllowed()')
       }
       await api.requestAccess?.()
-    } catch {
-      // Continue so the user can see the actual extension state from the next step.
+      console.log('[Freighter] Called requestAccess()')
     }
+  } catch (error) {
+    console.error('[Freighter] Error during access request:', error)
+    // Continue to the address retrieval so we can get a better error message
   }
 
   const address = await getFreighterAddress()
+  console.log('[Freighter] Got address:', address)
   const network = normalizeNetwork(await api.getNetwork?.() ?? STELLAR_NETWORK)
+  console.log('[Freighter] Network:', network)
   const balance = await getWalletBalance(address)
+  console.log('[Freighter] Balance:', balance)
 
   if (!isValidStellarAddress(address)) {
     throw new Error('Invalid wallet address returned by Freighter.')
