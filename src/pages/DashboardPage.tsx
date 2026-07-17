@@ -41,6 +41,7 @@ const initialPayments: PaymentRecord[] = [
 
 export const DashboardPage = () => {
   const { wallet, loading, connect, disconnect, refreshWallet } = useWallet()
+  const [connectionError, setConnectionError] = useState<string | null>(null)
   const [payments, setPayments] = useState<PaymentRecord[]>(initialPayments)
   const [submitting, setSubmitting] = useState(false)
   const [search, setSearch] = useState('')
@@ -62,6 +63,24 @@ export const DashboardPage = () => {
     const failed = payments.filter((payment) => payment.status === 'failed').length
     return { total, success, pending, failed, balance: wallet.balance }
   }, [payments, wallet.balance])
+
+  const handleConnect = async () => {
+    setConnectionError(null)
+    try {
+      await connect()
+      toast.success('Wallet connected successfully.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to connect wallet.'
+      setConnectionError(message)
+      toast.error(message)
+    }
+  }
+
+  const handleDisconnect = () => {
+    disconnect()
+    setConnectionError(null)
+    toast.info('Wallet disconnected.')
+  }
 
   const handleSubmit = async (values: PaymentFormValues) => {
     if (!wallet.isConnected || !wallet.address) {
@@ -117,7 +136,7 @@ export const DashboardPage = () => {
           </div>
         </motion.header>
 
-        <WalletPanel wallet={wallet} loading={loading} onConnect={() => { void connect().then(() => toast.success('Wallet connected.')).catch((error) => toast.error(error instanceof Error ? error.message : 'Unable to connect wallet.')) }} onDisconnect={() => { disconnect(); toast.info('Wallet disconnected.') }} />
+        <WalletPanel wallet={wallet} loading={loading} error={connectionError} onConnect={handleConnect} onDisconnect={handleDisconnect} />
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard title="Total Payments" value={stats.total} icon={<FiDollarSign />} accent="bg-cyan-500/20 text-cyan-300" />

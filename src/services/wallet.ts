@@ -1,18 +1,51 @@
 import type { WalletState } from '../types'
 import { getWalletBalance, STELLAR_NETWORK, TESTNET_NETWORK_PASSPHRASE, isValidStellarAddress } from '../utils/stellar'
 
+const normalizeNetwork = (network?: string | null) => network?.toLowerCase() ?? STELLAR_NETWORK
+
+const getFreighterApi = () => {
+  if (typeof window === 'undefined' || !window.freighterApi) {
+    throw new Error('Freighter wallet is not installed or available. Install the extension and refresh the page.')
+  }
+  return window.freighterApi
+}
+
+const getFreighterAddress = async (): Promise<string> => {
+  const api = getFreighterApi()
+
+  try {
+    if (api.getAddress) {
+      return await api.getAddress()
+    }
+
+    if (api.getPublicKey) {
+      return await api.getPublicKey()
+    }
+  } catch {
+    throw new Error('Freighter is installed but did not return a wallet address. Unlock it and try again.')
+  }
+
+  throw new Error('Freighter wallet does not expose a public key method.')
+}
+
 export const connectFreighterWallet = async (): Promise<WalletState> => {
-  if (typeof window === 'undefined' || !window.freighterApi?.isConnected) {
-    throw new Error('Freighter wallet is not installed or available.')
-  }
+  const api = getFreighterApi()
+  const connected = await api.isConnected?.() ?? false
 
-  const connected = await window.freighterApi.isConnected()
   if (!connected) {
-    await window.freighterApi.requestAccess?.()
+    try {
+      const allowed = await api.isAllowed?.() ?? false
+      if (!allowed) {
+        await api.setAllowed?.()
+      }
+      await api.requestAccess?.()
+    } catch {
+      // Continue so the user can see the actual extension state from the next step.
+    }
   }
 
-  const address = await window.freighterApi.getAddress()
-  const network = await window.freighterApi.getNetwork()
+  const address = await getFreighterAddress()
+  const network = normalizeNetwork(await api.getNetwork?.() ?? STELLAR_NETWORK)
   const balance = await getWalletBalance(address)
 
   if (!isValidStellarAddress(address)) {
@@ -24,7 +57,7 @@ export const connectFreighterWallet = async (): Promise<WalletState> => {
     address,
     network,
     balance,
-    status: network === STELLAR_NETWORK ? 'connected' : 'disconnected',
+    status: network.includes(STELLAR_NETWORK) ? 'connected' : 'disconnected',
   }
 }
 

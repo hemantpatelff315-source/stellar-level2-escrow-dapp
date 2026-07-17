@@ -25,14 +25,22 @@ export const createTransactionEnvelope = async (source: string, dest: string, am
 }
 
 export const getWalletBalance = async (address: string) => {
-  const server = new Horizon.Server(HORIZON_URL)
-  const account = await server.loadAccount(address)
-  return account.balances.find((balance) => balance.asset_type === 'native')?.balance ?? '0'
+  try {
+    const server = new Horizon.Server(HORIZON_URL)
+    const account = await server.loadAccount(address)
+    return account.balances.find((balance) => balance.asset_type === 'native')?.balance ?? '0'
+  } catch {
+    return '0'
+  }
 }
 
 export const getAccountDetails = async (address: string) => {
-  const server = new Horizon.Server(HORIZON_URL)
-  return server.loadAccount(address)
+  try {
+    const server = new Horizon.Server(HORIZON_URL)
+    return await server.loadAccount(address)
+  } catch {
+    return null
+  }
 }
 
 export const createSorobanServer = () => new Horizon.Server(RPC_URL)

@@ -1,17 +1,20 @@
 import { motion } from 'framer-motion'
-import { FiCheckCircle, FiDollarSign, FiLink2, FiLogOut } from 'react-icons/fi'
+import { FiCheckCircle, FiDollarSign, FiLink2, FiLogOut, FiAlertCircle } from 'react-icons/fi'
 import type { WalletState } from '../types'
 
 interface WalletPanelProps {
   wallet: WalletState
   loading: boolean
+  error: string | null
   onConnect: () => void
   onDisconnect: () => void
 }
 
 const shortAddress = (address: string | null) => address ? `${address.slice(0, 8)}...${address.slice(-6)}` : 'Not connected'
 
-export const WalletPanel = ({ wallet, loading, onConnect, onDisconnect }: WalletPanelProps) => (
+const isExtensionMissing = (error: string | null) => error?.toLowerCase().includes('not installed')
+
+export const WalletPanel = ({ wallet, loading, error, onConnect, onDisconnect }: WalletPanelProps) => (
   <motion.section
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -26,6 +29,27 @@ export const WalletPanel = ({ wallet, loading, onConnect, onDisconnect }: Wallet
         {wallet.isConnected ? 'Connected' : 'Disconnected'}
       </div>
     </div>
+
+    {error && isExtensionMissing(error) && (
+      <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+        <div className="flex items-start gap-3">
+          <FiAlertCircle className="mt-0.5 shrink-0 text-amber-300" />
+          <div className="text-sm text-amber-100">
+            <p className="font-semibold">Freighter Wallet not installed</p>
+            <p className="mt-1">Install the extension:</p>
+            <a href="https://chromewebstore.google.com/detail/freighter-wallet/bcacfldlkkdpmholelbnjodlcjhcjkde" target="_blank" rel="noopener noreferrer" className="mt-2 inline-block rounded bg-amber-500/30 px-3 py-1 text-xs font-medium hover:bg-amber-500/50">
+              Chrome Web Store →
+            </a>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {error && !isExtensionMissing(error) && (
+      <div className="mt-5 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
+        <p className="text-sm text-rose-200">{error}</p>
+      </div>
+    )}
 
     <div className="mt-6 grid gap-4 md:grid-cols-[1.3fr_0.7fr]">
       <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
@@ -51,7 +75,8 @@ export const WalletPanel = ({ wallet, loading, onConnect, onDisconnect }: Wallet
     <div className="mt-5 flex gap-3">
       <button
         onClick={onConnect}
-        className="rounded-full bg-cyan-500 px-4 py-2 font-medium text-slate-950 transition hover:bg-cyan-400"
+        disabled={loading || Boolean(error && isExtensionMissing(error))}
+        className="disabled:opacity-50 rounded-full bg-cyan-500 px-4 py-2 font-medium text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed"
       >
         {loading ? 'Connecting...' : wallet.isConnected ? 'Refresh' : 'Connect Wallet'}
       </button>
